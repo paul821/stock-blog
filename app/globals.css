@@ -1,26 +1,43 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .notebook-cell {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden;
+  }
+  
+  .cell-input {
+    @apply bg-gray-50 border-l-4 border-blue-500 p-4;
+  }
+  
+  .cell-output {
+    @apply p-4 border-t border-gray-200;
+  }
+  
+  .code-block {
+    @apply bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto;
+  }
+  
+  .metric-card {
+    @apply bg-white rounded-lg shadow-sm p-6 border border-gray-200;
+  }
+  
+  .metric-positive {
+    @apply text-green-600;
+  }
+  
+  .metric-negative {
+    @apply text-red-600;
+  }
+  
+  .section-header {
+    @apply text-2xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-blue-500;
+  }
 }
