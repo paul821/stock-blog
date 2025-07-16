@@ -5,15 +5,59 @@ import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './CodeBlock';
 import { ChartCell } from './ChartCell';
 import { MetricsTable } from './MetricsTable';
+import type { NotebookCell as NBCell } from '../types/notebook';
+
+// Local type for display cells
+interface DisplayNotebookCell {
+  type: 'markdown' | 'code';
+  content: string;
+  language?: string;
+  output?: {
+    type: 'text' | 'chart' | 'table';
+    content?: string;
+    data?: any;
+  };
+}
 
 interface NotebookRendererProps {
-  content: string;
+  content: string | NBCell[];
+}
+
+function isNotebookCellArray(content: any): content is NBCell[] {
+  return Array.isArray(content) && content.length > 0 && typeof content[0] === 'object' && 'cell_type' in content[0];
 }
 
 export function NotebookRenderer({ content }: NotebookRendererProps) {
-  // Parse notebook-style content
-  const cells = parseNotebookContent(content);
-  
+  let cells: DisplayNotebookCell[] = [];
+  if (isNotebookCellArray(content)) {
+    // Native .ipynb support
+    cells = content.map(cell => {
+      if (cell.cell_type === 'markdown') {
+        return {
+          type: 'markdown',
+          content: cell.source.join(''),
+        };
+      } else if (cell.cell_type === 'code') {
+        let output: DisplayNotebookCell['output'] = undefined;
+        if (cell.metadata?.output === 'chart') {
+          output = { type: 'chart' as const, data: generateSampleChartData() };
+        } else if (cell.metadata?.output === 'table') {
+          output = { type: 'table' as const, data: generateSampleTableData() };
+        }
+        return {
+          type: 'code',
+          content: cell.source.join(''),
+          language: cell.metadata?.language || 'python',
+          output,
+        };
+      }
+      return { type: 'markdown', content: '' };
+    });
+  } else {
+    // Legacy markdown string
+    cells = parseNotebookContent(content as string);
+  }
+
   return (
     <div className="space-y-6">
       {cells.map((cell, index) => (
@@ -24,14 +68,20 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
                 remarkPlugins={[remarkGfm]}
                 className="prose max-w-none"
                 components={{
-                  h1: ({ children }) => (
-                    <h1 className="section-header text-3xl">{children}</h1>
+                  h1: (props) => (
+                    <h1 {...props} className="section-header text-3xl">
+                      {props.children}
+                    </h1>
                   ),
-                  h2: ({ children }) => (
-                    <h2 className="section-header text-2xl">{children}</h2>
+                  h2: (props) => (
+                    <h2 {...props} className="section-header text-2xl">
+                      {props.children}
+                    </h2>
                   ),
-                  h3: ({ children }) => (
-                    <h3 className="section-header text-xl">{children}</h3>
+                  h3: (props) => (
+                    <h3 {...props} className="section-header text-xl">
+                      {props.children}
+                    </h3>
                   ),
                 }}
               >
@@ -39,7 +89,6 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
               </ReactMarkdown>
             </div>
           )}
-          
           {cell.type === 'code' && (
             <>
               <div className="cell-input">

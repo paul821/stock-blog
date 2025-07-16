@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import type { NotebookCell, NotebookJSON } from '../types/notebook';
 
 export interface Analysis {
   slug: string;
@@ -19,23 +20,57 @@ export interface Analysis {
 
 const analysesDirectory = path.join(process.cwd(), 'content/analyses');
 
+function parseNotebookFile(filePath: string): Analysis | null {
+  const ext = path.extname(filePath);
+  if (ext === '.md') {
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const { data, content } = matter(fileContents);
+    return {
+      slug: path.basename(filePath, '.md'),
+      content,
+      ...data,
+    } as Analysis;
+  } else if (ext === '.ipynb') {
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const nb: NotebookJSON = JSON.parse(fileContents);
+    // Extract metadata
+    const meta = nb.metadata || {};
+    // Convert notebook cells to markdown/code string for compatibility
+    let content = '';
+    for (const cell of nb.cells) {
+      if (cell.cell_type === 'markdown') {
+        content += cell.source.join('') + '\n\n';
+      } else if (cell.cell_type === 'code') {
+        content += '```' + (cell.metadata?.language || 'python') + '\n';
+        content += cell.source.join('') + '\n';
+        content += '```\n';
+        // Optionally, handle outputs (text, chart, table markers)
+        if (cell.metadata?.output === 'chart') {
+          content += '<!-- OUTPUT:chart -->\n';
+        } else if (cell.metadata?.output === 'table') {
+          content += '<!-- OUTPUT:table -->\n';
+        }
+      }
+    }
+    return {
+      slug: path.basename(filePath, '.ipynb'),
+      content,
+      ...meta,
+    } as Analysis;
+  }
+  return null;
+}
+
 export async function getAnalyses(): Promise<Analysis[]> {
   try {
     const filenames = fs.readdirSync(analysesDirectory);
     const analyses = filenames
-      .filter(name => name.endsWith('.md'))
+      .filter(name => name.endsWith('.md') || name.endsWith('.ipynb'))
       .map(name => {
         const filePath = path.join(analysesDirectory, name);
-        const fileContents = fs.readFileSync(filePath, 'utf8');
-        const { data, content } = matter(fileContents);
-        
-        return {
-          slug: name.replace('.md', ''),
-          content,
-          ...data,
-        } as Analysis;
-      });
-    
+        return parseNotebookFile(filePath);
+      })
+      .filter(Boolean) as Analysis[];
     return analyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Error reading analyses:', error);
@@ -45,15 +80,16 @@ export async function getAnalyses(): Promise<Analysis[]> {
 
 export async function getAnalysis(slug: string): Promise<Analysis | null> {
   try {
-    const filePath = path.join(analysesDirectory, `${slug}.md`);
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContents);
-    
-    return {
-      slug,
-      content,
-      ...data,
-    } as Analysis;
+    // Try .md first, then .ipynb
+    let filePath = path.join(analysesDirectory, `${slug}.md`);
+    if (fs.existsSync(filePath)) {
+      return parseNotebookFile(filePath);
+    }
+    filePath = path.join(analysesDirectory, `${slug}.ipynb`);
+    if (fs.existsSync(filePath)) {
+      return parseNotebookFile(filePath);
+    }
+    return null;
   } catch (error) {
     console.error(`Error reading analysis ${slug}:`, error);
     return null;
