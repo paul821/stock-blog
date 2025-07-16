@@ -83,12 +83,20 @@ function parseNotebookFile(filePath: string): Analysis | null {
 
 export async function getAnalyses(): Promise<Analysis[]> {
   try {
+    console.log('Fetching analyses from API...');
     // Use API route to get analyses
     const response = await fetch('/api/analyses');
+    console.log('API response status:', response.status);
+    
     if (!response.ok) {
+      console.error('API response not ok:', response.status, response.statusText);
       throw new Error(`Failed to fetch analyses: ${response.status}`);
     }
+    
     const analyses = await response.json();
+    console.log('Received analyses:', analyses.length, 'items');
+    console.log('Analysis slugs:', analyses.map((a: Analysis) => a.slug));
+    
     return analyses;
   } catch (error) {
     console.error('Error fetching analyses:', error);

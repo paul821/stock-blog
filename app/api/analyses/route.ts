@@ -84,18 +84,27 @@ function parseNotebookFile(filePath: string): Analysis | null {
 
 export async function GET() {
   try {
+    console.log('API route called - checking directory:', analysesDirectory);
+    console.log('Directory exists:', fs.existsSync(analysesDirectory));
+    
     const filenames = fs.readdirSync(analysesDirectory);
+    console.log('Found files:', filenames);
     
     const analyses = filenames
       .filter(name => name.endsWith('.md') || name.endsWith('.ipynb'))
       .map(name => {
         const filePath = path.join(analysesDirectory, name);
-        return parseNotebookFile(filePath);
+        console.log('Processing file:', name);
+        const analysis = parseNotebookFile(filePath);
+        console.log('Parsed result:', analysis ? analysis.slug : 'null');
+        return analysis;
       })
       .filter(Boolean) as Analysis[];
     
+    console.log('Total analyses loaded:', analyses.length);
     const sortedAnalyses = analyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
+    console.log('Returning analyses:', sortedAnalyses.map(a => a.slug));
     return NextResponse.json(sortedAnalyses);
   } catch (error) {
     console.error('Error reading analyses:', error);
