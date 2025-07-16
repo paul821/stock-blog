@@ -30,62 +30,51 @@ const fallbackMarketData = [
 
 export async function GET() {
   try {
-    // Use a free public API for market data
-    const symbols = ['SPY', 'QQQ', 'DIA']; // ETFs that track the major indices
+    // Try to import yahoo-finance2 dynamically
+    let yahooFinance;
+    try {
+      yahooFinance = await import('yahoo-finance2');
+    } catch (error) {
+      console.log('yahoo-finance2 not available, using fallback data');
+      return NextResponse.json(fallbackMarketData);
+    }
+
+    const symbols = ['^GSPC', '^IXIC', '^DJI'];
     const marketData = [];
 
-    for (let i = 0; i < symbols.length; i++) {
-      const symbol = symbols[i];
+    for (const symbol of symbols) {
       try {
-        // Using Alpha Vantage API (free tier available)
-        const response = await fetch(
-          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`
-        );
+        const quote = await yahooFinance.default.quote(symbol);
         
-        if (response.ok) {
-          const data = await response.json();
-          const quote = data['Global Quote'];
-          
-          if (quote && quote['05. price']) {
-            const currentPrice = parseFloat(quote['05. price']);
-            const previousClose = parseFloat(quote['08. previous close']);
-            const change = currentPrice - previousClose;
-            const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+        const name = symbol === '^GSPC' ? 'S&P 500' : 
+                    symbol === '^IXIC' ? 'NASDAQ' : 'DOW';
+        
+        const currentPrice = quote.regularMarketPrice || 0;
+        const previousClose = quote.regularMarketPreviousClose || currentPrice;
+        const change = currentPrice - previousClose;
+        const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
 
-            const name = symbol === 'SPY' ? 'S&P 500' : 
-                        symbol === 'QQQ' ? 'NASDAQ' : 'DOW';
-
-            marketData.push({
-              symbol: symbol === 'SPY' ? '^GSPC' : 
-                     symbol === 'QQQ' ? '^IXIC' : '^DJI',
-              name,
-              price: currentPrice,
-              change,
-              changePercent,
-              loading: false,
-            });
-          } else {
-            // If API doesn't return data, use fallback
-            const name = symbol === 'SPY' ? 'S&P 500' : 
-                        symbol === 'QQQ' ? 'NASDAQ' : 'DOW';
-            marketData.push({
-              symbol: symbol === 'SPY' ? '^GSPC' : 
-                     symbol === 'QQQ' ? '^IXIC' : '^DJI',
-              name,
-              price: fallbackMarketData[i].price,
-              change: fallbackMarketData[i].change,
-              changePercent: fallbackMarketData[i].changePercent,
-              loading: false,
-            });
-          }
-        } else {
-          // If API call fails, use fallback
-          marketData.push(fallbackMarketData[i]);
-        }
+        marketData.push({
+          symbol,
+          name,
+          price: currentPrice,
+          change,
+          changePercent,
+          loading: false,
+        });
       } catch (error) {
         console.error(`Error fetching data for ${symbol}:`, error);
-        // Use fallback data for this symbol
-        marketData.push(fallbackMarketData[i]);
+        // Add fallback data for this symbol
+        const fallbackData = {
+          symbol,
+          name: symbol === '^GSPC' ? 'S&P 500' : 
+                symbol === '^IXIC' ? 'NASDAQ' : 'DOW',
+          price: 0,
+          change: 0,
+          changePercent: 0,
+          loading: false,
+        };
+        marketData.push(fallbackData);
       }
     }
 
