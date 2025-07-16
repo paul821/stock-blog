@@ -1,7 +1,8 @@
+import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import type { NotebookCell, NotebookJSON } from '../types/notebook';
+import type { NotebookCell, NotebookJSON } from '../../../types/notebook';
 
 export interface Analysis {
   slug: string;
@@ -81,35 +82,23 @@ function parseNotebookFile(filePath: string): Analysis | null {
   }
 }
 
-export async function getAnalyses(): Promise<Analysis[]> {
+export async function GET() {
   try {
-    // Use API route to get analyses
-    const response = await fetch('/api/analyses');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch analyses: ${response.status}`);
-    }
-    const analyses = await response.json();
-    return analyses;
+    const filenames = fs.readdirSync(analysesDirectory);
+    
+    const analyses = filenames
+      .filter(name => name.endsWith('.md') || name.endsWith('.ipynb'))
+      .map(name => {
+        const filePath = path.join(analysesDirectory, name);
+        return parseNotebookFile(filePath);
+      })
+      .filter(Boolean) as Analysis[];
+    
+    const sortedAnalyses = analyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    return NextResponse.json(sortedAnalyses);
   } catch (error) {
-    console.error('Error fetching analyses:', error);
-    return [];
+    console.error('Error reading analyses:', error);
+    return NextResponse.json({ error: 'Failed to load analyses' }, { status: 500 });
   }
-}
-
-export async function getAnalysis(slug: string): Promise<Analysis | null> {
-  try {
-    // Try .md first, then .ipynb
-    let filePath = path.join(analysesDirectory, `${slug}.md`);
-    if (fs.existsSync(filePath)) {
-      return parseNotebookFile(filePath);
-    }
-    filePath = path.join(analysesDirectory, `${slug}.ipynb`);
-    if (fs.existsSync(filePath)) {
-      return parseNotebookFile(filePath);
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error reading analysis ${slug}:`, error);
-    return null;
-  }
-}
+} 
