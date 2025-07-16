@@ -52,11 +52,24 @@ function parseNotebookFile(filePath: string): Analysis | null {
         }
       }
     }
-    return {
+    
+    // Ensure all required fields are present with defaults
+    const analysis: Analysis = {
       slug: path.basename(filePath, '.ipynb'),
+      title: meta.title || 'Untitled Analysis',
+      company: meta.company || 'Unknown Company',
+      ticker: meta.ticker || 'UNKNOWN',
+      industry: meta.industry || 'Unknown Industry',
+      date: meta.date || new Date().toISOString().split('T')[0],
+      summary: meta.summary || 'No summary available',
+      prediction: meta.prediction || 'neutral',
+      targetPrice: meta.targetPrice || 0,
+      currentPrice: meta.currentPrice || 0,
       content,
-      ...meta,
-    } as Analysis;
+      tags: meta.tags || [],
+    };
+    
+    return analysis;
   }
   return null;
 }
