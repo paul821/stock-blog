@@ -21,69 +21,94 @@ export interface Analysis {
 const analysesDirectory = path.join(process.cwd(), 'content/analyses');
 
 function parseNotebookFile(filePath: string): Analysis | null {
-  const ext = path.extname(filePath);
-  if (ext === '.md') {
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContents);
-    return {
-      slug: path.basename(filePath, '.md'),
-      content,
-      ...data,
-    } as Analysis;
-  } else if (ext === '.ipynb') {
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-    const nb: NotebookJSON = JSON.parse(fileContents);
-    // Extract metadata
-    const meta = nb.metadata || {};
-    // Convert notebook cells to markdown/code string for compatibility
-    let content = '';
-    for (const cell of nb.cells) {
-      if (cell.cell_type === 'markdown') {
-        content += cell.source.join('') + '\n\n';
-      } else if (cell.cell_type === 'code') {
-        content += '```' + (cell.metadata?.language || 'python') + '\n';
-        content += cell.source.join('') + '\n';
-        content += '```\n';
-        // Optionally, handle outputs (text, chart, table markers)
-        if (cell.metadata?.output === 'chart') {
-          content += '<!-- OUTPUT:chart -->\n';
-        } else if (cell.metadata?.output === 'table') {
-          content += '<!-- OUTPUT:table -->\n';
+  try {
+    console.log('Parsing file:', filePath);
+    const ext = path.extname(filePath);
+    console.log('File extension:', ext);
+    
+    if (ext === '.md') {
+      const fileContents = fs.readFileSync(filePath, 'utf8');
+      const { data, content } = matter(fileContents);
+      console.log('Markdown metadata:', data);
+      return {
+        slug: path.basename(filePath, '.md'),
+        content,
+        ...data,
+      } as Analysis;
+    } else if (ext === '.ipynb') {
+      const fileContents = fs.readFileSync(filePath, 'utf8');
+      const nb: NotebookJSON = JSON.parse(fileContents);
+      console.log('Notebook metadata:', nb.metadata);
+      
+      // Extract metadata
+      const meta = nb.metadata || {};
+      // Convert notebook cells to markdown/code string for compatibility
+      let content = '';
+      for (const cell of nb.cells) {
+        if (cell.cell_type === 'markdown') {
+          content += cell.source.join('') + '\n\n';
+        } else if (cell.cell_type === 'code') {
+          content += '```' + (cell.metadata?.language || 'python') + '\n';
+          content += cell.source.join('') + '\n';
+          content += '```\n';
+          // Optionally, handle outputs (text, chart, table markers)
+          if (cell.metadata?.output === 'chart') {
+            content += '<!-- OUTPUT:chart -->\n';
+          } else if (cell.metadata?.output === 'table') {
+            content += '<!-- OUTPUT:table -->\n';
+          }
         }
       }
+      
+      // Ensure all required fields are present with defaults
+      const analysis: Analysis = {
+        slug: path.basename(filePath, '.ipynb'),
+        title: meta.title || 'Untitled Analysis',
+        company: meta.company || 'Unknown Company',
+        ticker: meta.ticker || 'UNKNOWN',
+        industry: meta.industry || 'Unknown Industry',
+        date: meta.date || new Date().toISOString().split('T')[0],
+        summary: meta.summary || 'No summary available',
+        prediction: meta.prediction || 'neutral',
+        targetPrice: meta.targetPrice || 0,
+        currentPrice: meta.currentPrice || 0,
+        content,
+        tags: meta.tags || [],
+      };
+      
+      console.log('Created analysis object:', analysis.slug, analysis.company);
+      return analysis;
     }
-    
-    // Ensure all required fields are present with defaults
-    const analysis: Analysis = {
-      slug: path.basename(filePath, '.ipynb'),
-      title: meta.title || 'Untitled Analysis',
-      company: meta.company || 'Unknown Company',
-      ticker: meta.ticker || 'UNKNOWN',
-      industry: meta.industry || 'Unknown Industry',
-      date: meta.date || new Date().toISOString().split('T')[0],
-      summary: meta.summary || 'No summary available',
-      prediction: meta.prediction || 'neutral',
-      targetPrice: meta.targetPrice || 0,
-      currentPrice: meta.currentPrice || 0,
-      content,
-      tags: meta.tags || [],
-    };
-    
-    return analysis;
+    console.log('Unsupported file type:', ext);
+    return null;
+  } catch (error) {
+    console.error('Error parsing file:', filePath, error);
+    return null;
   }
-  return null;
 }
 
 export async function getAnalyses(): Promise<Analysis[]> {
   try {
+    console.log('Analyses directory path:', analysesDirectory);
+    console.log('Current working directory:', process.cwd());
+    
     const filenames = fs.readdirSync(analysesDirectory);
+    console.log('Found files in directory:', filenames);
+    
     const analyses = filenames
       .filter(name => name.endsWith('.md') || name.endsWith('.ipynb'))
       .map(name => {
         const filePath = path.join(analysesDirectory, name);
-        return parseNotebookFile(filePath);
+        console.log('Processing file:', name, 'at path:', filePath);
+        const analysis = parseNotebookFile(filePath);
+        console.log('Parsed analysis result:', analysis ? `slug: ${analysis.slug}` : 'null');
+        return analysis;
       })
       .filter(Boolean) as Analysis[];
+    
+    console.log('Total analyses loaded:', analyses.length);
+    console.log('Analysis slugs:', analyses.map(a => a.slug));
+    
     return analyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Error reading analyses:', error);
