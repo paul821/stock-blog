@@ -2,39 +2,18 @@ import React from 'react';
 import Link from 'next/link';
 import { Analysis } from '@/lib/content';
 import { format } from 'date-fns';
-import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 interface AnalysisCardProps {
   analysis: Analysis;
 }
 
 export function AnalysisCard({ analysis }: AnalysisCardProps) {
-  const predictionIcon = {
-    bullish: <ArrowUp className="h-5 w-5 text-green-600" />,
-    bearish: <ArrowDown className="h-5 w-5 text-red-600" />,
-    neutral: <Minus className="h-5 w-5 text-gray-600" />,
-  };
-  
-  const predictionColor = {
-    bullish: 'text-green-600',
-    bearish: 'text-red-600',
-    neutral: 'text-gray-600',
-  };
-  
   return (
     <Link href={`/analysis/${analysis.slug}`}>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{analysis.company}</h3>
-            <p className="text-sm text-gray-500">{analysis.ticker} • {analysis.industry}</p>
-          </div>
-          <div className="flex items-center space-x-1">
-            {predictionIcon[analysis.prediction]}
-            <span className={`text-sm font-medium ${predictionColor[analysis.prediction]}`}>
-              {typeof analysis.prediction === 'string' ? analysis.prediction.toUpperCase() : 'N/A'}
-            </span>
-          </div>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">{analysis.company}</h3>
+          <p className="text-sm text-gray-500">{analysis.ticker} • {analysis.industry}</p>
         </div>
         
         <p className="text-gray-600 mb-4 line-clamp-3">{analysis.summary}</p>
@@ -45,9 +24,8 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
               ? format(new Date(analysis.date), 'MMM d, yyyy')
               : 'N/A'}
           </span>
-          <div className="text-sm">
-            <span className="text-gray-500">Target: </span>
-            <span className="font-semibold">${analysis.targetPrice}</span>
+          <div className="text-sm text-gray-500">
+            <span>Analysis</span>
           </div>
         </div>
       </div>

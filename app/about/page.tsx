@@ -2,31 +2,72 @@ import React from 'react';
 
 export default function AboutPage() {
   return (
-    <div className="max-w-2xl mx-auto py-16 px-4">
-      <h1 className="text-3xl font-bold mb-4">About Paul Analytics</h1>
-      <p className="text-lg text-gray-700 mb-2">
-        Welcome to Paul Analytics! 
-        
-        Hi, I’m Paul Kim - a rising senior at Northwestern University pursuing a double major in Industrial Engineering and Economics, complemented by the Kellogg Certificate in Managerial Analytics.
+    <div className="max-w-4xl mx-auto py-16 px-4">
+      <h1 className="text-4xl font-bold mb-8 text-gray-900">About Paul Analytics</h1>
+      
+      <div className="prose prose-lg max-w-none">
+        <p className="text-xl text-gray-700 mb-8 leading-relaxed">
+          Welcome to Paul Analytics! Hi, I'm Paul Kim - a rising senior at Northwestern University 
+          pursuing a double major in Industrial Engineering and Economics, complemented by the 
+          Kellogg Certificate in Managerial Analytics.
+        </p>
 
-My academic and professional journey centers around one goal: to uncover actionable insights from complex systems - whether that’s through econometric modeling, optimization, or machine learning. From consulting on a $9B M&A deal at Monitor Deloitte to conducting stratified analysis of U.S. corporate debt as a research assistant, I’ve applied quantitative thinking to real-world business, financial, and organizational challenges.
+        <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+          My academic and professional journey centers around one goal: to uncover actionable insights 
+          from complex systems - whether that's through econometric modeling, optimization, or machine 
+          learning. From consulting on a $9B M&A deal at Monitor Deloitte to conducting stratified 
+          analysis of U.S. corporate debt as a research assistant, I've applied quantitative thinking 
+          to real-world business, financial, and organizational challenges.
+        </p>
 
-I’ve used Python, SQL, and TensorFlow to predict stock volatility, classify corporate debt structures, and integrate AI into procurement pipelines. Equally comfortable working cross-functionally and communicating findings to stakeholders, I bring a mix of analytical rigor and strategic perspective.
+        <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+          I've used Python, SQL, and TensorFlow to predict stock volatility, classify corporate debt 
+          structures, and integrate AI into procurement pipelines. Equally comfortable working 
+          cross-functionally and communicating findings to stakeholders, I bring a mix of analytical 
+          rigor and strategic perspective.
+        </p>
 
-I’m currently exploring roles in:
-<li>
-<ul>Consulting (operations, economic)</ul>
-<ul>Quantitative finance & trading</ul>
-<ul>Data science & analytics</ul>
-<ul>Project and product management</ul>
-  </li>
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-900">I'm currently exploring roles in:</h2>
+          <ul className="list-disc list-inside space-y-2 text-lg text-gray-700 ml-4">
+            <li>Consulting (operations, economic)</li>
+            <li>Quantitative finance & trading</li>
+            <li>Data science & analytics</li>
+            <li>Project and product management</li>
+          </ul>
+        </div>
 
-If you’re working at the intersection of data, strategy, and innovation, I’d love to connect.
+        <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+          If you're working at the intersection of data, strategy, and innovation, I'd love to connect.
+        </p>
 
-Email: paulkim2024@u.northwestern.edu
-      </p>
-      <a className="text-gray-500" href="https://www.linkedin.com/in/paul821">LinkedIn Profile</a>
-      <a className="text-gray-500" href="https://paul821.github.io">Personal Website</a>
+        <div className="border-t border-gray-200 pt-8">
+          <div className="flex flex-col sm:flex-row gap-4 text-lg">
+            <a 
+              href="mailto:paulkim2024@u.northwestern.edu"
+              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              📧 paulkim2024@u.northwestern.edu
+            </a>
+            <a 
+              href="https://www.linkedin.com/in/paul821"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              💼 LinkedIn Profile
+            </a>
+            <a 
+              href="https://paul821.github.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              🌐 Personal Website
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 
