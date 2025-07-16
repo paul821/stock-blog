@@ -47,7 +47,7 @@ export default function AboutPage() {
               href="mailto:paulkim2024@u.northwestern.edu"
               className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
-              📧 paulkim2024@u.northwestern.edu
+              paulkim2024@u.northwestern.edu
             </a>
             <a 
               href="https://www.linkedin.com/in/paul821"
@@ -55,7 +55,7 @@ export default function AboutPage() {
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
-              💼 LinkedIn Profile
+              LinkedIn Profile
             </a>
             <a 
               href="https://paul821.github.io"
@@ -63,7 +63,7 @@ export default function AboutPage() {
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
-              🌐 Personal Website
+              Personal Website
             </a>
           </div>
         </div>
