@@ -1,6 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as matter from 'gray-matter';
+const grayMatter = (matter as any).default || matter;
 import type { NotebookCell, NotebookJSON } from '../types/notebook';
 
 export interface Analysis {
@@ -14,7 +15,7 @@ export interface Analysis {
   prediction: 'bullish' | 'bearish' | 'neutral';
   targetPrice: number;
   currentPrice: number;
-  content: string;
+  content: string | NotebookCell[];
   tags: string[];
 }
 
@@ -26,7 +27,7 @@ function parseNotebookFile(filePath: string): Analysis | null {
     
     if (ext === '.md') {
       const fileContents = fs.readFileSync(filePath, 'utf8');
-      const { data, content } = matter(fileContents);
+      const { data, content } = grayMatter(fileContents);
       return {
         slug: path.basename(filePath, '.md'),
         content,
@@ -35,29 +36,9 @@ function parseNotebookFile(filePath: string): Analysis | null {
     } else if (ext === '.ipynb') {
       const fileContents = fs.readFileSync(filePath, 'utf8');
       const nb: NotebookJSON = JSON.parse(fileContents);
-      
-      // Extract metadata
       const meta = nb.metadata || {};
-      // Convert notebook cells to markdown/code string for compatibility
-      let content = '';
-      for (const cell of nb.cells) {
-        if (!Array.isArray(cell.source)) continue;
-        if (cell.cell_type === 'markdown') {
-          content += cell.source.join('') + '\n\n';
-        } else if (cell.cell_type === 'code') {
-          content += '```' + (cell.metadata?.language || 'python') + '\n';
-          content += cell.source.join('') + '\n';
-          content += '```\n';
-          // Optionally, handle outputs (text, chart, table markers)
-          if (cell.metadata?.output === 'chart') {
-            content += '<!-- OUTPUT:chart -->\n';
-          } else if (cell.metadata?.output === 'table') {
-            content += '<!-- OUTPUT:table -->\n';
-          }
-        }
-      }
-      
-      // Ensure all required fields are present with defaults
+      // Pass NBCell[] directly as content
+      const content = nb.cells;
       const analysis: Analysis = {
         slug: path.basename(filePath, '.ipynb'),
         title: meta.title || 'Untitled Analysis',
@@ -69,10 +50,9 @@ function parseNotebookFile(filePath: string): Analysis | null {
         prediction: meta.prediction || 'neutral',
         targetPrice: meta.targetPrice || 0,
         currentPrice: meta.currentPrice || 0,
-        content,
+        content, // NBCell[] instead of string
         tags: meta.tags || [],
       };
-      
       return analysis;
     }
     return null;

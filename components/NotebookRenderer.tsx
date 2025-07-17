@@ -38,8 +38,40 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
           content: cell.source.join(''),
         };
       } else if (cell.cell_type === 'code') {
+        // Handle outputs array
         let output: DisplayNotebookCell['output'] = undefined;
-        if (cell.metadata?.output === 'chart') {
+        if (cell.outputs && cell.outputs.length > 0) {
+          // Prioritize text/plain, then stream, then images/html
+          for (const out of cell.outputs) {
+            if (out.output_type === 'stream' && out.text) {
+              output = {
+                type: 'text',
+                content: Array.isArray(out.text) ? out.text.join('') : out.text,
+              };
+              break;
+            } else if ((out.output_type === 'execute_result' || out.output_type === 'display_data') && out.data) {
+              if (out.data['text/plain']) {
+                output = {
+                  type: 'text',
+                  content: Array.isArray(out.data['text/plain']) ? out.data['text/plain'].join('') : out.data['text/plain'],
+                };
+                break;
+              } else if (out.data['image/png']) {
+                output = {
+                  type: 'text',
+                  content: `<img src="data:image/png;base64,${out.data['image/png']}" />`,
+                };
+                break;
+              } else if (out.data['text/html']) {
+                output = {
+                  type: 'text',
+                  content: Array.isArray(out.data['text/html']) ? out.data['text/html'].join('') : out.data['text/html'],
+                };
+                break;
+              }
+            }
+          }
+        } else if (cell.metadata?.output === 'chart') {
           output = { type: 'chart' as const, data: generateSampleChartData() };
         } else if (cell.metadata?.output === 'table') {
           output = { type: 'table' as const, data: generateSampleTableData() };
@@ -100,6 +132,8 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
                     <ChartCell data={cell.output.data} />
                   ) : cell.output.type === 'table' ? (
                     <MetricsTable data={cell.output.data} />
+                  ) : cell.output.type === 'text' && cell.output.content?.startsWith('<img') ? (
+                    <span dangerouslySetInnerHTML={{ __html: cell.output.content }} />
                   ) : (
                     <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
                       {cell.output.content}
