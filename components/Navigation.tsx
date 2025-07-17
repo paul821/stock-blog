@@ -6,18 +6,20 @@ export function Navigation() {
   return (
     <nav className="bg-gray-900 text-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="grid grid-cols-3 items-center h-16">
           {/* Left: Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <TrendingUp className="h-8 w-8 text-white" />
-            <span className="text-xl font-bold text-white">Paul Analytics</span>
-          </Link>
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <TrendingUp className="h-8 w-8 text-white" />
+              <span className="text-xl font-bold text-white">Paul Analytics</span>
+            </Link>
+          </div>
           {/* Center: Analyses */}
-          <div className="flex-1 flex justify-center">
+          <div className="flex justify-center">
             <Link href="/analyses" className="text-gray-300 hover:text-white text-lg font-semibold">Analyses</Link>
           </div>
           {/* Right: About */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-end space-x-4">
             <Link href="/about" className="text-gray-300 hover:text-white text-lg font-semibold">About</Link>
             <Menu className="h-5 w-5 text-white md:hidden" />
           </div>
