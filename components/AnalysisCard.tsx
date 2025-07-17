@@ -22,8 +22,8 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
   };
   
   return (
-    <Link href={`/analysis/${analysis.slug}`}>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <Link href={`/analysis/${analysis.slug}`} className="block h-full">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow h-full flex flex-col">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{analysis.company}</h3>
@@ -39,7 +39,7 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
         
         <p className="text-gray-600 mb-4 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{analysis.summary}</p>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-auto">
           <span className="text-sm text-gray-500">
             {(analysis.date && !isNaN(new Date(analysis.date).getTime()))
               ? format(new Date(analysis.date), 'MMM d, yyyy')

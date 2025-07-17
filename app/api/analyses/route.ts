@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
@@ -36,19 +37,25 @@ function parseNotebookFile(filePath: string): Analysis | null {
     } else if (ext === '.ipynb') {
       const fileContents = fs.readFileSync(filePath, 'utf8');
       const nb: NotebookJSON = JSON.parse(fileContents);
-      
-      // Extract metadata
-      const meta = nb.metadata || {};
+      // Extract metadata or auto-populate
+      let meta = nb.metadata || {};
+      // Find first markdown cell for title/summary
+      let firstMarkdown = nb.cells.find(cell => cell.cell_type === 'markdown' && Array.isArray(cell.source) && cell.source.length > 0);
+      let firstLine = firstMarkdown ? firstMarkdown.source[0].replace(/^#\s*/, '').trim() : '';
+      let summaryText = firstMarkdown ? firstMarkdown.source.join('').trim() : '';
+      // Get file mtime for date fallback
+      let fileDate = new Date(fs.statSync(filePath).mtime).toISOString().split('T')[0];
       // Convert notebook cells to markdown/code string for compatibility
       let content = '';
+      let skipped = 0;
       for (const cell of nb.cells) {
+        if (!Array.isArray(cell.source)) { skipped++; continue; }
         if (cell.cell_type === 'markdown') {
           content += cell.source.join('') + '\n\n';
         } else if (cell.cell_type === 'code') {
           content += '```' + (cell.metadata?.language || 'python') + '\n';
           content += cell.source.join('') + '\n';
           content += '```\n';
-          // Optionally, handle outputs (text, chart, table markers)
           if (cell.metadata?.output === 'chart') {
             content += '<!-- OUTPUT:chart -->\n';
           } else if (cell.metadata?.output === 'table') {
@@ -56,23 +63,21 @@ function parseNotebookFile(filePath: string): Analysis | null {
           }
         }
       }
-      
-      // Ensure all required fields are present with defaults
+      // Auto-populate missing metadata fields
       const analysis: Analysis = {
         slug: path.basename(filePath, '.ipynb'),
-        title: meta.title || 'Untitled Analysis',
-        company: meta.company || 'Unknown Company',
+        title: meta.title || firstLine || 'Untitled Analysis',
+        company: meta.company || 'Unknown',
         ticker: meta.ticker || 'UNKNOWN',
-        industry: meta.industry || 'Unknown Industry',
-        date: meta.date || new Date().toISOString().split('T')[0],
-        summary: meta.summary || 'No summary available',
+        industry: meta.industry || 'Unknown',
+        date: meta.date || fileDate,
+        summary: meta.summary || summaryText || 'No summary available',
         prediction: meta.prediction || 'neutral',
         targetPrice: meta.targetPrice || 0,
         currentPrice: meta.currentPrice || 0,
         content,
         tags: meta.tags || [],
       };
-      
       return analysis;
     }
     return null;

@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 export default async function Home() {
   const analyses = await getAnalyses();
+  console.log('Analyses:', analyses);
   
   return (
     <div className="space-y-12">
@@ -20,9 +21,7 @@ export default async function Home() {
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {analyses.map((analysis) => (
-              <Link key={analysis.slug} href={`/analysis/${analysis.slug}`} className="block">
-                <AnalysisCard analysis={analysis} />
-              </Link>
+              <AnalysisCard key={analysis.slug} analysis={analysis} />
             ))}
           </div>
         )}

@@ -41,6 +41,7 @@ function parseNotebookFile(filePath: string): Analysis | null {
       // Convert notebook cells to markdown/code string for compatibility
       let content = '';
       for (const cell of nb.cells) {
+        if (!Array.isArray(cell.source)) continue;
         if (cell.cell_type === 'markdown') {
           content += cell.source.join('') + '\n\n';
         } else if (cell.cell_type === 'code') {
@@ -84,8 +85,16 @@ function parseNotebookFile(filePath: string): Analysis | null {
 export async function getAnalyses(): Promise<Analysis[]> {
   try {
     console.log('Fetching analyses from API...');
-    // Use API route to get analyses
-    const response = await fetch('/api/analyses');
+    let apiUrl = '/api/analyses';
+    let fetchOptions = {};
+    // If running on the server, use absolute URL and no-store cache
+    if (typeof window === 'undefined') {
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const host = process.env.NEXT_PUBLIC_SITE_URL || 'localhost:3000';
+      apiUrl = `${protocol}://${host}/api/analyses`;
+      fetchOptions = { cache: 'no-store' };
+    }
+    const response = await fetch(apiUrl, fetchOptions);
     console.log('API response status:', response.status);
     
     if (!response.ok) {
