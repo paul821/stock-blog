@@ -12,11 +12,11 @@ interface DisplayNotebookCell {
   type: 'markdown' | 'code';
   content: string;
   language?: string;
-  output?: {
+  output?: Array<{
     type: 'text' | 'chart' | 'table';
     content?: string;
     data?: any;
-  };
+  }>;
 }
 
 interface NotebookRendererProps {
@@ -38,56 +38,63 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
           content: cell.source.join(''),
         };
       } else if (cell.cell_type === 'code') {
-        // Handle outputs array
-        let output: DisplayNotebookCell['output'] = undefined;
+        // Collect all outputs
+        let outputs: DisplayNotebookCell['output'] = [];
         if (cell.outputs && cell.outputs.length > 0) {
-          // Prioritize text/plain, then stream, then images/html
           for (const out of cell.outputs) {
             if (out.output_type === 'stream' && out.text) {
-              output = {
+              outputs.push({
                 type: 'text',
                 content: Array.isArray(out.text) ? out.text.join('') : out.text,
-              };
-              break;
+              });
             } else if ((out.output_type === 'execute_result' || out.output_type === 'display_data') && out.data) {
-              if (out.data['text/plain']) {
-                output = {
+              if (out.data['image/png']) {
+                outputs.push({
                   type: 'text',
-                  content: Array.isArray(out.data['text/plain']) ? out.data['text/plain'].join('') : out.data['text/plain'],
-                };
-                break;
-              } else if (out.data['image/png']) {
-                output = {
-                  type: 'text',
-                  content: `<img src="data:image/png;base64,${out.data['image/png']}" />`,
-                };
-                break;
-              } else if (out.data['text/html']) {
-                output = {
+                  content: `<img src=\"data:image/png;base64,${out.data['image/png']}\" />`,
+                });
+              }
+              if (out.data['text/html']) {
+                outputs.push({
                   type: 'text',
                   content: Array.isArray(out.data['text/html']) ? out.data['text/html'].join('') : out.data['text/html'],
-                };
-                break;
+                });
+              }
+              if (out.data['text/plain']) {
+                outputs.push({
+                  type: 'text',
+                  content: Array.isArray(out.data['text/plain']) ? out.data['text/plain'].join('') : out.data['text/plain'],
+                });
               }
             }
           }
         } else if (cell.metadata?.output === 'chart') {
-          output = { type: 'chart' as const, data: generateSampleChartData() };
+          outputs.push({ type: 'chart', data: generateSampleChartData() });
         } else if (cell.metadata?.output === 'table') {
-          output = { type: 'table' as const, data: generateSampleTableData() };
+          outputs.push({ type: 'table', data: generateSampleTableData() });
         }
         return {
           type: 'code',
           content: cell.source.join(''),
           language: cell.metadata?.language || 'python',
-          output,
+          output: outputs.length > 0 ? outputs : undefined,
         };
       }
       return { type: 'markdown', content: '' };
     });
   } else {
     // Legacy markdown string
-    cells = parseNotebookContent(content as string);
+    // parseNotebookContent returns output as a single object, so wrap it in an array if present
+    cells = parseNotebookContent(content as string).map(cell => {
+      if (cell.type === 'code') {
+        if (cell.output) {
+          return { ...cell, output: [cell.output] };
+        } else {
+          return { ...cell, output: undefined };
+        }
+      }
+      return cell;
+    }) as DisplayNotebookCell[];
   }
 
   return (
@@ -126,18 +133,20 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
               <div className="cell-input">
                 <CodeBlock language={cell.language || 'python'} code={cell.content} />
               </div>
-              {cell.output && (
-                <div className="cell-output">
-                  {cell.output.type === 'chart' ? (
-                    <ChartCell data={cell.output.data} />
-                  ) : cell.output.type === 'table' ? (
-                    <MetricsTable data={cell.output.data} />
-                  ) : cell.output.type === 'text' && cell.output.content?.startsWith('<img') ? (
-                    <span dangerouslySetInnerHTML={{ __html: cell.output.content }} />
-                  ) : (
-                    <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-                      {cell.output.content}
-                    </pre>
+              {Array.isArray(cell.output) && cell.output.length > 0 && (
+                <div className="cell-output space-y-2">
+                  {cell.output.map((out, i) =>
+                    out.type === 'chart' ? (
+                      <ChartCell key={i} data={out.data} />
+                    ) : out.type === 'table' ? (
+                      <MetricsTable key={i} data={out.data} />
+                    ) : out.type === 'text' && out.content?.startsWith('<img') ? (
+                      <span key={i} dangerouslySetInnerHTML={{ __html: out.content }} />
+                    ) : (
+                      <pre key={i} className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+                        {out.content}
+                      </pre>
+                    )
                   )}
                 </div>
               )}
