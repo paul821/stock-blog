@@ -13,7 +13,7 @@ interface DisplayNotebookCell {
   content: string;
   language?: string;
   output?: Array<{
-    type: 'text' | 'chart' | 'table';
+    type: 'text' | 'chart' | 'table' | 'html';
     content?: string;
     data?: any;
   }>;
@@ -33,36 +33,67 @@ function isDataFrameTable(htmlContent: string): boolean {
          (htmlContent.includes('<table') && htmlContent.includes('<th') && htmlContent.includes('<td'));
 }
 
-/ Function to parse DataFrame HTML into table data
+// Function to parse DataFrame HTML into table data using regex (SSR-safe)
 function parseDataFrameHTML(htmlContent: string): any[] {
-  // Create a temporary DOM element to parse the HTML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
-  const table = doc.querySelector('table');
-  
-  if (!table) return [];
-  
-  const headers: string[] = [];
-  const headerCells = table.querySelectorAll('thead th, tr:first-child th');
-  headerCells.forEach(th => {
-    headers.push(th.textContent?.trim() || '');
-  });
-  
-  const rows: any[] = [];
-  const bodyRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
-  bodyRows.forEach(tr => {
-    const cells = tr.querySelectorAll('td, th');
-    if (cells.length > 0) {
-      const rowData: any = {};
-      cells.forEach((cell, index) => {
-        const header = headers[index] || `Column ${index + 1}`;
-        rowData[header] = cell.textContent?.trim() || '';
-      });
-      rows.push(rowData);
+  try {
+    // Extract table content using regex
+    const tableMatch = htmlContent.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+    if (!tableMatch) return [];
+    
+    const tableContent = tableMatch[1];
+    
+    // Extract headers
+    const headers: string[] = [];
+    const headerMatch = tableContent.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i) || 
+                       tableContent.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    
+    if (headerMatch) {
+      const headerContent = headerMatch[1];
+      const headerCells = headerContent.match(/<th[^>]*>([\s\S]*?)<\/th>/gi) || 
+                         headerContent.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      
+      if (headerCells) {
+        headerCells.forEach(cell => {
+          const cellText = cell.replace(/<[^>]*>/g, '').trim();
+          headers.push(cellText);
+        });
+      }
     }
-  });
-  
-  return rows;
+    
+    // Extract rows
+    const rows: any[] = [];
+    const bodyMatch = tableContent.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
+    const bodyContent = bodyMatch ? bodyMatch[1] : tableContent;
+    
+    const rowMatches = bodyContent.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+    if (rowMatches) {
+      // Skip first row if it contains headers and we already extracted them
+      const startIndex = headers.length > 0 && !bodyMatch ? 1 : 0;
+      
+      for (let i = startIndex; i < rowMatches.length; i++) {
+        const rowContent = rowMatches[i];
+        const cellMatches = rowContent.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi);
+        
+        if (cellMatches) {
+          const rowData: any = {};
+          cellMatches.forEach((cell, index) => {
+            const cellText = cell.replace(/<[^>]*>/g, '').trim();
+            const header = headers[index] || `Column ${index + 1}`;
+            rowData[header] = cellText;
+          });
+          
+          if (Object.keys(rowData).length > 0) {
+            rows.push(rowData);
+          }
+        }
+      }
+    }
+    
+    return rows;
+  } catch (error) {
+    console.warn('Failed to parse DataFrame HTML:', error);
+    return [];
+  }
 }
 
 export function NotebookRenderer({ content }: NotebookRendererProps) {
@@ -155,7 +186,6 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
       return cell;
     }) as DisplayNotebookCell[];
   }
-  }
 
   return (
     <div className="space-y-6">
@@ -199,7 +229,13 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
                     out.type === 'chart' ? (
                       <ChartCell key={i} data={out.data} />
                     ) : out.type === 'table' ? (
-                      <MetricsTable key={i} data={out.data} />
+                      <div key={i} className="overflow-x-auto">
+                        <DataFrameTable data={out.data} />
+                      </div>
+                    ) : out.type === 'html' ? (
+                      <div key={i} className="bg-white p-4 rounded border">
+                        <div dangerouslySetInnerHTML={{ __html: out.content || '' }} />
+                      </div>
                     ) : out.type === 'text' && out.content?.startsWith('<img') ? (
                       <span key={i} dangerouslySetInnerHTML={{ __html: out.content }} />
                     ) : (
@@ -217,7 +253,6 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
     </div>
   );
 }
-
 
 // New component to render DataFrame-style tables
 function DataFrameTable({ data }: { data: any[] }) {
