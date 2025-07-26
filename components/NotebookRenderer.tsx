@@ -27,6 +27,44 @@ function isNotebookCellArray(content: any): content is NBCell[] {
   return Array.isArray(content) && content.length > 0 && typeof content[0] === 'object' && 'cell_type' in content[0];
 }
 
+// Function to detect if HTML content is a DataFrame table
+function isDataFrameTable(htmlContent: string): boolean {
+  return htmlContent.includes('dataframe') || 
+         (htmlContent.includes('<table') && htmlContent.includes('<th') && htmlContent.includes('<td'));
+}
+
+/ Function to parse DataFrame HTML into table data
+function parseDataFrameHTML(htmlContent: string): any[] {
+  // Create a temporary DOM element to parse the HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const table = doc.querySelector('table');
+  
+  if (!table) return [];
+  
+  const headers: string[] = [];
+  const headerCells = table.querySelectorAll('thead th, tr:first-child th');
+  headerCells.forEach(th => {
+    headers.push(th.textContent?.trim() || '');
+  });
+  
+  const rows: any[] = [];
+  const bodyRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+  bodyRows.forEach(tr => {
+    const cells = tr.querySelectorAll('td, th');
+    if (cells.length > 0) {
+      const rowData: any = {};
+      cells.forEach((cell, index) => {
+        const header = headers[index] || `Column ${index + 1}`;
+        rowData[header] = cell.textContent?.trim() || '';
+      });
+      rows.push(rowData);
+    }
+  });
+  
+  return rows;
+}
+
 export function NotebookRenderer({ content }: NotebookRendererProps) {
   let cells: DisplayNotebookCell[] = [];
   if (isNotebookCellArray(content)) {
@@ -51,14 +89,35 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
               if (out.data['image/png']) {
                 outputs.push({
                   type: 'text',
-                  content: `<img src=\"data:image/png;base64,${out.data['image/png']}\" />`,
+                  content: `<img src="data:image/png;base64,${out.data['image/png']}" />`,
                 });
               }
               if (out.data['text/html']) {
-                outputs.push({
-                  type: 'text',
-                  content: Array.isArray(out.data['text/html']) ? out.data['text/html'].join('') : out.data['text/html'],
-                });
+                const htmlContent = Array.isArray(out.data['text/html']) 
+                  ? out.data['text/html'].join('') 
+                  : out.data['text/html'];
+                
+                // Check if it's a DataFrame table
+                if (isDataFrameTable(htmlContent)) {
+                  const tableData = parseDataFrameHTML(htmlContent);
+                  if (tableData.length > 0) {
+                    outputs.push({
+                      type: 'table',
+                      data: tableData,
+                    });
+                  } else {
+                    // Fallback to HTML rendering if parsing fails
+                    outputs.push({
+                      type: 'html',
+                      content: htmlContent,
+                    });
+                  }
+                } else {
+                  outputs.push({
+                    type: 'html',
+                    content: htmlContent,
+                  });
+                }
               }
               if (out.data['text/plain']) {
                 outputs.push({
@@ -95,6 +154,7 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
       }
       return cell;
     }) as DisplayNotebookCell[];
+  }
   }
 
   return (
@@ -155,6 +215,45 @@ export function NotebookRenderer({ content }: NotebookRendererProps) {
         </div>
       ))}
     </div>
+  );
+}
+
+
+// New component to render DataFrame-style tables
+function DataFrameTable({ data }: { data: any[] }) {
+  if (!data || data.length === 0) return null;
+  
+  const columns = Object.keys(data[0]);
+  
+  return (
+    <table className="min-w-full divide-y divide-gray-200 border">
+      <thead className="bg-gray-50">
+        <tr>
+          {columns.map((column) => (
+            <th
+              key={column}
+              className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r"
+            >
+              {column}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {data.map((row, index) => (
+          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+            {columns.map((column) => (
+              <td
+                key={column}
+                className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 border-r"
+              >
+                {row[column]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
