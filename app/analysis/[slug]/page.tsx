@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getAnalysis, getAnalyses } from '@/lib/content'; // Corrected imports
+import { getAnalysis, getAnalyses } from '@/lib/content';
 import { NotebookRenderer } from '@/components/NotebookRenderer';
 import { AnalysisHeader } from '@/components/AnalysisHeader';
 
@@ -15,14 +15,23 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
   if (!analysis) {
     notFound();
   }
+
+  // --- THIS IS THE FIX ---
+  // We create a new object that has the exact 'cells' and 'metadata' properties
+  // that the NotebookRenderer component expects.
+  const notebookForRenderer = {
+    // The 'metadata' is the entire analysis object itself.
+    metadata: analysis,
+    // The 'cells' are stored inside the 'content' property of the analysis.
+    cells: analysis.content 
+  };
   
   return (
     <div className="max-w-4xl mx-auto">
       <AnalysisHeader analysis={analysis} />
       
-      {/* --- THIS IS THE FIX --- */}
-      {/* We now pass the entire 'analysis' object to the 'notebook' prop. */}
-      <NotebookRenderer notebook={analysis} />
+      {/* Now we pass the correctly shaped object to the renderer */}
+      <NotebookRenderer notebook={notebookForRenderer} />
 
     </div>
   );
