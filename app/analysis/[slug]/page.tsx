@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
-import { getAnalysis } from '@/lib/content';
+import { getAnalysis, getAnalyses } from '@/lib/content'; // Corrected imports
 import { NotebookRenderer } from '@/components/NotebookRenderer';
 import { AnalysisHeader } from '@/components/AnalysisHeader';
-import { getAnalyses } from '@/lib/content';
 
 interface AnalysisPageProps {
   params: {
@@ -20,7 +19,11 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
   return (
     <div className="max-w-4xl mx-auto">
       <AnalysisHeader analysis={analysis} />
-      <NotebookRenderer content={analysis.content} />
+      
+      {/* --- THIS IS THE FIX --- */}
+      {/* We now pass the entire 'analysis' object to the 'notebook' prop. */}
+      <NotebookRenderer notebook={analysis} />
+
     </div>
   );
 }
