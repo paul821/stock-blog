@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getAnalysis, getAnalyses } from '@/lib/content';
 import { NotebookRenderer } from '@/components/NotebookRenderer';
 import { AnalysisHeader } from '@/components/AnalysisHeader';
-import { NotebookCell } from '@/types/notebook'; // Assuming your type is here
+import { NotebookCell } from '@/types/notebook'; // Ensure this path is correct
 
 interface AnalysisPageProps {
   params: {
@@ -11,30 +11,29 @@ interface AnalysisPageProps {
 }
 
 export default async function AnalysisPage({ params }: AnalysisPageProps) {
+  // 1. Fetch the analysis data as before.
   const analysis = await getAnalysis(params.slug);
   
   if (!analysis) {
     notFound();
   }
 
-  // --- THIS IS THE FIX ---
-  // We create a new object that has the exact 'cells' and 'metadata' properties
-  // that the NotebookRenderer component expects.
+  // 2. Create a new object with the exact shape the NotebookRenderer expects.
+  // This is the key step that resolves the type errors.
   const notebookForRenderer = {
+    // The 'metadata' is the entire top-level analysis object.
     metadata: analysis,
-    
-    // Check if `analysis.content` is an array. If not, provide an empty array.
-    // This guarantees that `cells` is always the correct type (NotebookCell[]).
+    // The 'cells' are inside `analysis.content`. We ensure it's always an array.
     cells: Array.isArray(analysis.content) ? analysis.content : []
   };
   
   return (
     <div className="max-w-4xl mx-auto">
+      {/* AnalysisHeader uses the original `analysis` object */}
       <AnalysisHeader analysis={analysis} />
       
-      {/* Now we pass the correctly shaped and typed object to the renderer */}
+      {/* NotebookRenderer uses the new, correctly shaped object */}
       <NotebookRenderer notebook={notebookForRenderer} />
-
     </div>
   );
 }
